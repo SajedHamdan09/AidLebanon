@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -12,22 +13,76 @@ import Link from 'next/link'
 
 export default function LoginPage() {
   const [isUploading, setIsUploading] = useState(false)
+  const [loginError, setLoginError] = useState<string | null>(null) // State to track login errors
   const { toast } = useToast()
+  const router = useRouter()
 
   const handleUserLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    toast({
-      title: "Login Attempted",
-      description: "This would connect to your authentication service",
-    })
+
+    const username = (document.getElementById('username') as HTMLInputElement).value
+    const password = (document.getElementById('user-password') as HTMLInputElement).value
+
+    try {
+      const response = await fetch('http://localhost:8080/user/all')
+      if (!response.ok) throw new Error('Failed to fetch user data')
+
+      const users = await response.json()
+      const user = users.find(
+        (u: any) => u.name === username && u.password === password
+      )
+
+      if (user) {
+        toast({
+          title: 'Login Successful',
+          description: `Welcome, ${user.name}`,
+          variant: 'default',
+        })
+        setLoginError(null) // Clear any previous error
+        router.push('/') // Redirect to the main page
+      } else {
+        setLoginError('Invalid username or password. Please try again.') // Set the error message
+      }
+    } catch (error) {
+      setLoginError('An error occurred while processing your login. Please try again.')
+      console.error(error)
+    }
   }
 
   const handleCenterLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    toast({
-      title: "Center Registration Submitted",
-      description: "Your application will be reviewed by an admin",
-    })
+
+    const email = (document.getElementById('center-email') as HTMLInputElement).value
+    const centerName = (document.getElementById('center-name') as HTMLInputElement).value
+    const password = (document.getElementById('center-password') as HTMLInputElement).value
+
+    try {
+      const response = await fetch('http://localhost:8080/aidcenter/all')
+      if (!response.ok) throw new Error('Failed to fetch aid center data')
+
+      const centers = await response.json()
+      const center = centers.find(
+        (c: any) =>
+          c.contactInfo === email &&
+          c.name === centerName &&
+          c.password === password
+      )
+
+      if (center) {
+        toast({
+          title: 'Login Successful',
+          description: `Welcome, ${center.name}`,
+          variant: 'default',
+        })
+        setLoginError(null) // Clear any previous error
+        router.push('/') // Redirect to the main page
+      } else {
+        setLoginError('Invalid email, center name, or password. Please try again.') // Set the error message
+      }
+    } catch (error) {
+      setLoginError('An error occurred while processing your login. Please try again.')
+      console.error(error)
+    }
   }
 
   return (
@@ -45,10 +100,6 @@ export default function LoginPage() {
             <CardContent>
               <form onSubmit={handleUserLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="user-email">Email</Label>
-                  <Input id="user-email" type="email" required />
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
                   <Input id="username" required />
                 </div>
@@ -56,6 +107,9 @@ export default function LoginPage() {
                   <Label htmlFor="user-password">Password</Label>
                   <Input id="user-password" type="password" required />
                 </div>
+                {loginError && ( // Render error message if `loginError` is set
+                  <p className="text-sm text-red-500">{loginError}</p>
+                )}
                 <Link href="/reset-password" className="text-sm text-blue-500 hover:underline">Forgot Password?</Link>
                 <Button type="submit" className="w-full">Login</Button>
               </form>
@@ -65,7 +119,7 @@ export default function LoginPage() {
         <TabsContent value="center">
           <Card>
             <CardHeader>
-              <CardTitle>Center Registration</CardTitle>
+              <CardTitle>Center Login</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCenterLogin} className="space-y-4">
@@ -81,6 +135,9 @@ export default function LoginPage() {
                   <Label htmlFor="center-password">Password</Label>
                   <Input id="center-password" type="password" required />
                 </div>
+                {loginError && ( // Render error message if `loginError` is set
+                  <p className="text-sm text-red-500">{loginError}</p>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="collaborators">Center's Collaborator Emails</Label>
                   <Input id="collaborators" placeholder="Enter emails separated by commas" />
@@ -88,8 +145,8 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <Label htmlFor="license">Upload License (PDF)</Label>
                   <div className="flex items-center gap-4">
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant="outline"
                       disabled={isUploading}
                       onClick={() => {
@@ -98,7 +155,7 @@ export default function LoginPage() {
                       }}
                     >
                       <FileUpload className="w-4 h-4 mr-2" />
-                      {isUploading ? "Uploading..." : "Upload PDF"}
+                      {isUploading ? 'Uploading...' : 'Upload PDF'}
                     </Button>
                   </div>
                 </div>
@@ -115,4 +172,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
